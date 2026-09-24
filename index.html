@@ -1,0 +1,598 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Quantum jumps of sound: a working model</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sofia+Sans:ital,wght@0,400;0,600;1,400&family=Sofia+Sans+Condensed:wght@500;600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --panel:#DAD7D0; --panel-2:#CFCBC2; --bezel:#B3AEA3;
+  --ink:#212529; --ink-2:#474D53; --ink-3:#656B71;
+  --key:#F0EEE9; --key-edge:#9A958A; --key-down:#C8C3B8;
+  --preset:#3E875A; --preset-edge:#2A5E3E; --preset-ink:#F3F8F2; --focus:#1D6DB0;
+  --screen:#0F1F25; --screen-edge:#081216; --grid:#1F3C45; --axis:#8AA6AD; --scr-text:#C6D8DC;
+  --trace1:#F2C53D; --trace2:#4CC9DB; --trace3:#E8709F;
+  --yes:#7BD69C; --maybe:#F2C53D; --no:#F2907A;
+  --cond:"Sofia Sans Condensed","Arial Narrow","Helvetica Neue",Arial,sans-serif;
+  --body:"Sofia Sans","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --panel:#25282B; --panel-2:#1E2124; --bezel:#3A3E42;
+    --ink:#E7E4DD; --ink-2:#B6BABE; --ink-3:#90959A;
+    --key:#34383C; --key-edge:#575C61; --key-down:#2A2D31;
+    --preset:#4C9A67; --preset-edge:#2F6A45; --preset-ink:#F1F6F0; --focus:#79B8F3;
+    --screen:#0B171C; --screen-edge:#050C0F; --grid:#1B3640;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --panel:#25282B; --panel-2:#1E2124; --bezel:#3A3E42;
+  --ink:#E7E4DD; --ink-2:#B6BABE; --ink-3:#90959A;
+  --key:#34383C; --key-edge:#575C61; --key-down:#2A2D31;
+  --preset:#4C9A67; --preset-edge:#2F6A45; --preset-ink:#F1F6F0; --focus:#79B8F3;
+  --screen:#0B171C; --screen-edge:#050C0F; --grid:#1B3640;
+  color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px);}
+*,*::before,*::after{box-sizing:inherit;}
+body{margin:0;background:var(--panel);color:var(--ink);font:400 16px/1.5 var(--body);-webkit-font-smoothing:antialiased;}
+.wrap{max-width:1320px;margin:0 auto;padding:30px clamp(14px,3vw,36px) 56px;}
+h1,h2,h3{font-family:var(--cond);}
+.head h1{font-weight:800;font-size:clamp(2.5rem,6.4vw,4.8rem);line-height:.92;letter-spacing:-.012em;margin:0 0 16px;max-width:14ch;}
+.lede{font-size:1.14rem;line-height:1.5;max-width:60ch;margin:0 0 10px;}
+.src{font-size:.88rem;max-width:78ch;color:var(--ink-2);margin:0;}
+.src i{font-style:italic;}
+
+.instrument{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:16px;margin-top:28px;background:var(--panel-2);border:1px solid var(--bezel);border-radius:16px;padding:14px;}
+.screens{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-content:start;}
+.scr{margin:0;display:flex;flex-direction:column;gap:8px;background:var(--panel);border:1px solid var(--bezel);border-radius:10px;padding:10px 10px 12px;min-width:0;}
+.scr figcaption{font-family:var(--cond);font-weight:600;font-size:1.08rem;line-height:1.2;}
+.scr figcaption .sub{font-family:var(--body);font-weight:400;font-size:.84rem;color:var(--ink-3);}
+.scr figcaption .busy{font-family:var(--body);font-weight:400;font-size:.84rem;color:var(--ink-3);}
+.scr canvas{display:block;width:100%;aspect-ratio:16/10;background:var(--screen);border-radius:4px;box-shadow:inset 0 0 0 1px var(--screen-edge),inset 0 2px 12px rgba(0,0,0,.5);}
+#c-map{cursor:crosshair;}
+.scr-note{margin:0;font-size:.9rem;line-height:1.45;color:var(--ink-2);min-height:2.9em;max-width:70ch;}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;font-size:.92rem;}
+.row input[type=range]{flex:1 1 140px;}
+.row output{font-family:var(--cond);font-weight:600;font-variant-numeric:tabular-nums;min-width:3ch;}
+.row label{display:inline-flex;align-items:center;gap:6px;}
+
+.keys{display:flex;flex-direction:column;gap:14px;min-width:0;}
+.ann{display:grid;gap:8px;}
+.ann>div{background:var(--screen);color:var(--scr-text);border-radius:6px;padding:8px 11px 9px;box-shadow:inset 0 0 0 1px var(--screen-edge);}
+.ann small{display:block;font-size:.8rem;color:var(--axis);line-height:1.3;}
+.ann b{display:block;font-family:var(--cond);font-weight:800;font-size:1.75rem;line-height:1.05;font-variant-numeric:tabular-nums;color:var(--trace1);}
+.ann .why{display:block;font-size:.84rem;line-height:1.35;margin-top:2px;}
+.ann b.yes{color:var(--yes);} .ann b.maybe{color:var(--maybe);} .ann b.no{color:var(--no);}
+.presets{display:grid;gap:7px;}
+button.key{font:600 .98rem/1.2 var(--cond);text-align:left;padding:9px 12px 8px;background:var(--key);color:var(--ink);border:1px solid var(--key-edge);border-radius:5px;box-shadow:0 2px 0 var(--key-edge);cursor:pointer;}
+button.key:hover{filter:brightness(1.04);}
+button.key:active{transform:translateY(2px);box-shadow:none;background:var(--key-down);}
+button.key.preset{background:var(--preset);color:var(--preset-ink);border-color:var(--preset-edge);box-shadow:0 2px 0 var(--preset-edge);}
+button.key[disabled]{opacity:.45;cursor:not-allowed;transform:none;}
+.ctls{display:grid;gap:12px;}
+.ctl{display:grid;gap:3px;}
+.ctl-top{display:flex;justify-content:space-between;gap:8px;align-items:baseline;}
+.ctl label{font-weight:600;font-size:.95rem;}
+.ctl output{font-family:var(--cond);font-weight:600;font-size:1.02rem;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.ctl-note{margin:0;font-size:.8rem;line-height:1.35;color:var(--ink-3);}
+input[type=range]{width:100%;accent-color:var(--preset);margin:4px 0 2px;}
+details.asm{border-top:1px solid var(--bezel);padding-top:10px;}
+details.asm summary{cursor:pointer;font-weight:600;font-size:.95rem;}
+details.asm .ctls{margin-top:10px;}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;}
+
+.bridge{margin-top:22px;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:20px;background:var(--panel-2);border:1px solid var(--bezel);border-radius:16px;padding:20px;}
+.bridge h2{font-weight:800;font-size:clamp(1.7rem,3.2vw,2.3rem);line-height:1;margin:0 0 8px;}
+.bridge .b-lede{margin:0 0 14px;max-width:60ch;color:var(--ink-2);}
+.fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:10px 12px;margin-bottom:14px;}
+.fields label{display:grid;gap:4px;font-size:.86rem;color:var(--ink-2);line-height:1.25;}
+.fields input{font:600 1.05rem var(--cond);padding:6px 8px;border:1px solid var(--key-edge);border-radius:3px;background:var(--key);color:var(--ink);font-variant-numeric:tabular-nums;width:100%;}
+.readout{background:var(--screen);color:var(--scr-text);border-radius:8px;padding:14px 16px;display:grid;gap:7px;align-content:start;box-shadow:inset 0 0 0 1px var(--screen-edge),inset 0 2px 12px rgba(0,0,0,.45);}
+.readout .line{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid var(--grid);padding-bottom:5px;font-size:.95rem;}
+.readout .line b{font-family:var(--cond);font-weight:600;font-size:1.1rem;color:var(--trace1);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.readout .regime{margin:4px 0 6px;font-size:.93rem;line-height:1.45;}
+.readout .b-why{margin:8px 0 0;font-size:.86rem;line-height:1.45;color:var(--axis);}
+.readout button.key{justify-self:start;}
+
+.notes{margin-top:26px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px 26px;color:var(--ink-2);font-size:.92rem;line-height:1.5;}
+.notes h3{font-weight:600;color:var(--ink);margin:0 0 4px;font-size:1.1rem;line-height:1.2;}
+.notes p{margin:0;max-width:62ch;}
+
+@media (max-width:1120px){
+  .instrument{grid-template-columns:1fr;}
+  .keys{order:-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));align-items:start;}
+}
+@media (max-width:760px){
+  .screens{grid-template-columns:1fr;}
+  .bridge{grid-template-columns:1fr;}
+  .scr canvas{aspect-ratio:4/3;}
+}
+@media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="head">
+  <h1>Quantum jumps of sound</h1>
+  <p class="lede">A working model of Stanford’s 2026 experiment. A qubit asks a vibrating resonator “one phonon, or none?” hundreds of times over, without destroying the answer, until the phonon leaves. Put your own resonator’s lifetime on the dial and see whether it would show.</p>
+  <p class="src">From the paper (Makihara, Szakiel et al., <i>Science</i>, 17 Sept 2026, doi 10.1126/science.aeh7535): a phonon lifetime of 2.1 ms, a qubit shift of 328 kHz per phonon, and single phonons heralded at 85% fidelity. Everything else here is an assumption, and is labelled as one.</p>
+</header>
+
+<main class="instrument" id="instrument">
+  <section class="screens" aria-label="Model displays">
+    <figure class="scr">
+      <figcaption>Where devices sit <span class="sub">(click anywhere to try that device)</span></figcaption>
+      <canvas id="c-map" role="img" aria-label="Map of phonon lifetime against qubit shift per phonon"></canvas>
+      <p class="scr-note" id="map-note"></p>
+    </figure>
+    <figure class="scr">
+      <figcaption>What the qubit sees <span class="sub">(its spectrum: one line per phonon number)</span></figcaption>
+      <canvas id="c-spec" role="img" aria-label="Qubit spectrum split by phonon number"></canvas>
+      <div class="row"><label for="nbar">Mean phonons in the resonator</label><input type="range" id="nbar" min="0.2" max="6" step="0.1" value="1.5"><output id="o-nbar" for="nbar">1.5</output></div>
+      <p class="scr-note" id="spec-note"></p>
+    </figure>
+    <figure class="scr">
+      <figcaption>One run, reading by reading</figcaption>
+      <canvas id="c-run" role="img" aria-label="One measurement record with the real-time estimate"></canvas>
+      <div class="row"><button class="key" id="b-run" type="button">Take a new run</button><label><input type="checkbox" id="truth" checked> Show the hidden truth</label></div>
+      <p class="scr-note" id="run-note"></p>
+    </figure>
+    <figure class="scr">
+      <figcaption>Hundreds of runs <span class="busy" id="busy"></span></figcaption>
+      <canvas id="c-many" role="img" aria-label="Histogram of how long the phonon stayed, across many runs"></canvas>
+      <p class="scr-note" id="many-note"></p>
+    </figure>
+  </section>
+
+  <aside class="keys" aria-label="Controls">
+    <div class="ann" aria-live="polite">
+      <div><small>Readings per phonon lifetime</small><b id="a-per">–</b></div>
+      <div><small>Readings needed to be 99% sure</small><b id="a-req">–</b></div>
+      <div><small>Can you watch it jump?</small><b id="a-yes">–</b><span class="why" id="a-why"></span></div>
+    </div>
+    <div class="presets">
+      <button class="key preset" type="button" data-preset="stanford">Stanford 2026, paper values</button>
+      <button class="key" type="button" data-preset="fbar2010">The 2010 FBAR’s lifetime (6.1 ns)</button>
+      <button class="key" type="button" data-preset="bench">A bench FBAR, Q 1000 at 2 GHz</button>
+    </div>
+    <div class="ctls" id="ctls"></div>
+    <details class="asm">
+      <summary>Assumptions not given in the paper</summary>
+      <div class="ctls" id="asm"></div>
+    </details>
+  </aside>
+</main>
+
+<section class="bridge" aria-labelledby="bridge-h">
+  <div>
+    <h2 id="bridge-h">From your BVD fit to a quantum coupling</h2>
+    <p class="b-lede">The static and motional capacitances from an ordinary Butterworth–Van Dyke fit are enough to estimate how hard a resonator grabs a qubit, and so the shift per phonon. Any FBAR admittance fit gives you both.</p>
+    <div class="fields">
+      <label>Resonator frequency (GHz)<input id="f-f" type="number" step="0.01" min="0.01" value="2"></label>
+      <label>Static capacitance C₀ (fF)<input id="f-c0" type="number" step="any" min="0" value="10"></label>
+      <label>Motional capacitance Cₘ (aF)<input id="f-cm" type="number" step="any" min="0" value="0.8"></label>
+      <label>Qubit’s own capacitance (fF)<input id="f-cp" type="number" step="any" min="0" value="70"></label>
+      <label>Qubit minus resonator frequency (MHz)<input id="f-d" type="number" step="any" value="150"></label>
+    </div>
+    <div class="row">
+      <button class="key" type="button" id="bp-nano">Nanomechanical example</button>
+      <button class="key" type="button" id="bp-fbar">Bench FBAR example</button>
+    </div>
+  </div>
+  <div class="readout" aria-live="polite">
+    <div class="line"><span>Total capacitance across the qubit</span><b id="r-cs">–</b></div>
+    <div class="line"><span>Qubit nonlinearity α/2π</span><b id="r-al">–</b></div>
+    <div class="line"><span>Coupling g/2π</span><b id="r-g">–</b></div>
+    <div class="line"><span>Shift per phonon 2χ/2π</span><b id="r-chi">–</b></div>
+    <p class="regime" id="r-reg"></p>
+    <button class="key preset" type="button" id="b-use">Use this shift in the model</button>
+    <p class="b-why">Why quantum labs shrink the transducer: C₀ sits straight across the qubit, and the qubit’s nonlinearity falls as one over the total capacitance. A 50 Ω-matched 2 GHz FBAR brings about 1.6 pF; a qubit wants tens of femtofarads.</p>
+  </div>
+</section>
+
+<footer class="notes">
+  <div><h3>What is being simulated</h3><p>The resonator is tracked by its phonon number, which falls at rate n(n<sub>th</sub>+1)/T₁ and climbs at rate (n+1)n<sub>th</sub>/T₁. Each reading asks only “how many phonons?” and leaves that number alone, so the quantum state between readings stays a mixture of number states and the full quantum trajectory reduces to this jump process. The quantum part is in the steps, and in choosing to measure energy rather than displacement.</p></div>
+  <div><h3>One reading</h3><p>A qubit pulse tuned to the one-phonon line, long enough (one over the shift) to pick that line out, then a readout. It goes wrong when the qubit decays mid-reading, when neighbouring lines leak into the pulse, or when the readout errs.</p></div>
+  <div><h3>The estimate</h3><p>The yellow trace is a Bayes filter run over the readings as they arrive, which is what the lab watches live. A herald needs 99:1 odds; jump times and lifetimes use the whole record. When the mode is warm the one-phonon state can also leave upwards, so it lives T₁ ÷ (1 + 3n<sub>th</sub>).</p></div>
+  <div><h3>Limits</h3><p>From the paper: 2.1 ms, 328 kHz per phonon, 85% herald fidelity. The qubit lifetime, readout error, timings, temperature and the bridge examples are assumptions. Line widths and pulse selectivity are simple Lorentzian estimates; there is no pulse shaping and no back-action on the phonon. Bridge formulas: g ≈ (f/2)√(Cₘ/C<sub>total</sub>), α = −e²/(2C<sub>total</sub>h), 2χ = 2g²α/[Δ(Δ+α)], valid for Cₘ ≪ C<sub>total</sub> and g ≪ |Δ|, |Δ+α|. Source code and physics tests: <a href="https://github.com/ash23x/quantum-jumps-of-sound" style="color:inherit">github.com/ash23x/quantum-jumps-of-sound</a>. Built with Claude.</p></div>
+</footer>
+</div>
+
+<script>
+(function(){
+'use strict';
+// ---- Quantum-jumps-of-sound toy model: physics core (plain JS, no deps) ----
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const H_PLANCK=6.62607015e-34, Q_E=1.602176634e-19;
+
+// derived measurement parameters from the knobs
+function derive(p){
+  const tsel = 1/p.chi2;                 // number-selective pulse: just long enough to pick out one phonon line
+  const tc = tsel + p.tro;               // one reading = selective pulse + readout and reset
+  const pdec = 1-Math.exp(-(0.5*tsel+0.5*p.tro)/p.T1q); // qubit relaxes before it is read
+  const wq = 1/(Math.PI*p.T1q);          // qubit FWHM, Hz (T2 taken equal to T1)
+  const w1 = wq + 1/(2*Math.PI*p.T1m);   // FWHM of the one-phonon line
+  // pulse window ~ chi2 wide centred on the one-phonon line (Lorentzian overlap model)
+  const eta1 = (2/Math.PI)*Math.atan(p.chi2/w1);                                   // n=1 line caught by the window
+  const x0 = (Math.atan(3*p.chi2/wq)-Math.atan(p.chi2/wq))/Math.PI;               // n=0 line leaking into it
+  const e1 = 1-(1-p.eps)*(1-pdec)*eta1;  // P(no click | one phonon)
+  const e0 = p.eps+(1-p.eps)*(1-pdec)*x0; // P(click | no phonon): leakage clicks decay too
+  const perLife = p.T1m/tc;
+  const resolved = p.chi2 >= 2*w1;
+  const D = (1-e1)*Math.log((1-e1)/e0) + e1*Math.log(e1/(1-e0)); // nats per reading
+  const nReq = D>0 ? Math.log(99)/D : Infinity;                  // readings for 99:1 odds
+  const visible = perLife >= 5*nReq;
+  const T1eff = p.T1m/(1+3*p.nth);       // a warm one-phonon state can also leave upwards
+  return {tsel,tc,pdec,e1,e0,wq,w1,eta1,x0,perLife,resolved,D,nReq,visible,T1eff};
+}
+
+function generator(kappa,nth,N){
+  const Q=[];for(let i=0;i<N;i++)Q.push(new Float64Array(N));
+  for(let n=0;n<N;n++){
+    const down=n>0?kappa*n*(nth+1):0, up=n<N-1?kappa*(n+1)*nth:0;
+    if(n>0)Q[n][n-1]=down; if(n<N-1)Q[n][n+1]=up; Q[n][n]=-(down+up);
+  }
+  return Q;
+}
+function matmul(A,B){const N=A.length,C=[];for(let i=0;i<N;i++){const r=new Float64Array(N);for(let k=0;k<N;k++){const a=A[i][k];if(a===0)continue;for(let j=0;j<N;j++)r[j]+=a*B[k][j];}C.push(r);}return C;}
+function eye(N){const I=[];for(let i=0;i<N;i++){const r=new Float64Array(N);r[i]=1;I.push(r);}return I;}
+function expm(Q,t){
+  const N=Q.length;let norm=0;
+  for(let i=0;i<N;i++){let s=0;for(let j=0;j<N;j++)s+=Math.abs(Q[i][j]*t);norm=Math.max(norm,s);}
+  const s=norm>0.25?Math.ceil(Math.log2(norm/0.25)):0, f=t/Math.pow(2,s);
+  const A=Q.map(r=>r.map(v=>v*f));
+  let term=eye(N),res=eye(N);
+  for(let k=1;k<=20;k++){term=matmul(term,A);for(let i=0;i<N;i++)for(let j=0;j<N;j++){term[i][j]/=k;res[i][j]+=term[i][j];}}
+  for(let i=0;i<s;i++)res=matmul(res,res);
+  for(let i=0;i<N;i++){let z=0;for(let j=0;j<N;j++){if(res[i][j]<0)res[i][j]=0;z+=res[i][j];}for(let j=0;j<N;j++)res[i][j]/=z;}
+  return res;
+}
+
+// one run: truth (Gillespie on Fock states), clicks, forward (real-time) + smoothed posteriors
+function oneRun(p,d,K,N,P0,P,rng){
+  const kappa=1/p.T1m, nth=p.nth;
+  const truth=new Uint8Array(K), clicks=new Uint8Array(K);
+  let n = rng()<p.pload?1:0, t=0;
+  for(let k=0;k<K;k++){
+    const tk=d.tsel/2+k*d.tc;
+    for(;;){
+      const down=n>0?kappa*n*(nth+1):0, up=n<N-1?kappa*(n+1)*nth:0, R=down+up;
+      if(R<=0){t=tk;break;}
+      const dt=-Math.log(1-rng())/R;
+      if(t+dt>tk){t=tk;break;}
+      t+=dt; n=(rng()*R<down)?n-1:n+1;
+    }
+    truth[k]=n;
+    clicks[k]= rng() < (n===1?1-d.e1:d.e0) ? 1:0;
+  }
+  // forward
+  const F=new Float64Array(K*N), fwd1=new Float64Array(K);
+  let a=new Float64Array(N); a[0]=1-p.pload; a[1]=p.pload;
+  for(let k=0;k<K;k++){
+    const M=k===0?P0:P, b=new Float64Array(N);
+    for(let i=0;i<N;i++){const ai=a[i];if(ai===0)continue;const r=M[i];for(let j=0;j<N;j++)b[j]+=ai*r[j];}
+    const c=clicks[k];let z=0;
+    for(let j=0;j<N;j++){const L=j===1?(c?1-d.e1:d.e1):(c?d.e0:1-d.e0);b[j]*=L;z+=b[j];}
+    if(!(z>0)){b.fill(1/N);z=1;} else for(let j=0;j<N;j++)b[j]/=z;
+    a=b; F.set(a,k*N); fwd1[k]=a[1];
+  }
+  // backward -> smoothed P(n=1)
+  const sm1=new Float64Array(K); let be=new Float64Array(N).fill(1);
+  for(let k=K-1;k>=0;k--){
+    let z=0,s1=0;for(let j=0;j<N;j++){const g=F[k*N+j]*be[j];z+=g;if(j===1)s1=g;}
+    sm1[k]=z>0?s1/z:0;
+    if(k>0){
+      const c=clicks[k],nb=new Float64Array(N);let zz=0;
+      const Lb=new Float64Array(N);for(let j=0;j<N;j++){const L=j===1?(c?1-d.e1:d.e1):(c?d.e0:1-d.e0);Lb[j]=L*be[j];}
+      for(let i=0;i<N;i++){let s=0;const r=P[i];for(let j=0;j<N;j++)s+=r[j]*Lb[j];nb[i]=s;zz+=s;}
+      for(let i=0;i<N;i++)nb[i]/=(zz>0?zz:1); be=nb;
+    }
+  }
+  // herald = the real-time belief reaches 99:1 odds
+  let kh=-1;
+  for(let k=0;k<K;k++)if(fwd1[k]>=0.99){kh=k;break;}
+  return {truth,clicks,fwd1,sm1,kh};
+}
+
+function setup(p){
+  const d=derive(p), N=p.nth<=0.1?4:6;
+  const Q=generator(1/p.T1m,p.nth,N);
+  const P=expm(Q,d.tc), P0=expm(Q,d.tsel/2);
+  return {d,N,P,P0};
+}
+function recordLength(p,d,Kmax){ return Math.max(40,Math.min(Kmax,Math.ceil(6*p.T1m/d.tc))); }
+
+// first stay in the one-phonon state after the herald, read off the smoothed posterior.
+// A drop only counts once it has lasted W readings, so noise dips are bridged and later
+// thermal re-excitations are not added to the first stay.
+function firstStay(o,K,d,T1eff){
+  if(o.kh<0) return null;
+  const W=Math.max(3,Math.ceil(0.1*T1eff/d.tc));
+  let kend=-1;
+  for(let k=o.kh+1;k<K;k++){
+    if(o.sm1[k]<0.5){let ok=true;for(let j=k;j<Math.min(K,k+W);j++){if(o.sm1[j]>=0.5){ok=false;k=j;break;}}if(ok){kend=k;break;}}
+  }
+  const stop = Math.min(K, kend<0?K:kend+W);
+  let dw=0; for(let k=o.kh;k<stop;k++) dw+=o.sm1[k];
+  return {stay:Math.max(0,dw*d.tc-d.tc/2), ended:kend>=0, kend};
+}
+function manyRuns(p,seed){
+  const {d,N,P,P0}=setup(p);
+  const K=recordLength(p,d,20000);
+  const runs=Math.max(60,Math.min(400,Math.floor(3e7/(2*N*N*K))));
+  const rng=mulberry32(seed);
+  const waits=[];let nh=0,nj=0,sumW=0,good=0;
+  for(let r=0;r<runs;r++){
+    const o=oneRun(p,d,K,N,P0,P,rng);
+    const f=firstStay(o,K,d,d.T1eff); if(!f) continue; nh++; if(o.truth[o.kh]===1) good++;
+    sumW+=f.stay; if(f.ended){nj++;waits.push(f.stay);}   // censored stays still add time
+  }
+  const T1est = nj>0 ? sumW/nj : NaN;
+  return {runs,nh,nj,waits,T1est,K,d,heraldFid: nh>0?good/nh:NaN};
+}
+
+/* ===================== page wiring ===================== */
+const DEFAULTS={T1m:2.1e-3,chi2:328e3,nth:0.02,T1q:30e-6,eps:0.02,tro:2e-6,pload:0.9};
+const S=Object.assign({nbar:1.5,showTruth:true,seed:1},DEFAULTS);
+const BENCH_T1=1000/(2*Math.PI*2e9);
+const MAP={T:[1e-9,1],X:[1e3,1e8]};
+const $=id=>document.getElementById(id);
+const reduceMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const FONT='"Sofia Sans Condensed","Arial Narrow","Helvetica Neue",Arial,sans-serif';
+
+/* ---------- formatting ---------- */
+function num(x){const a=Math.abs(x);if(a===0)return '0';if(a>=100)return x.toFixed(0);if(a>=10)return x.toFixed(1);if(a>=1)return x.toFixed(2);return x.toPrecision(2);}
+function fmtTime(s){if(!isFinite(s))return '–';const a=Math.abs(s);if(a>=1)return num(s)+' s';if(a>=1e-3)return num(s*1e3)+' ms';if(a>=1e-6)return num(s*1e6)+' µs';return num(s*1e9)+' ns';}
+function fmtHz(h){if(!isFinite(h))return '–';const a=Math.abs(h);const sg=h<0?'−':'';if(a>=1e9)return sg+num(a/1e9)+' GHz';if(a>=1e6)return sg+num(a/1e6)+' MHz';if(a>=1e3)return sg+num(a/1e3)+' kHz';return sg+num(a)+' Hz';}
+function fmtCap(c){const a=Math.abs(c);if(a>=1e-12)return num(c*1e12)+' pF';if(a>=1e-15)return num(c*1e15)+' fF';return num(c*1e18)+' aF';}
+const SUP='⁰¹²³⁴⁵⁶⁷⁸⁹';
+function sci(x){if(!(x>0)||!isFinite(x))return '–';let e=Math.floor(Math.log10(x)+1e-12);let m=+(x/Math.pow(10,e)).toFixed(1);if(m>=10){m=1;e++;}const es=(e<0?'⁻':'')+String(Math.abs(e)).split('').map(c=>SUP[+c]).join('');return (m===1?'':m.toFixed(1)+'×')+'10'+es;}
+function timeUnit(T){if(T>=1)return{s:1,l:'s'};if(T>=1e-3)return{s:1e-3,l:'ms'};if(T>=1e-6)return{s:1e-6,l:'µs'};return{s:1e-9,l:'ns'};}
+function fmtPM(v,s){const u=timeUnit(v);return `${num(v/u.s)} ± ${num(s/u.s)} ${u.l}`;}
+function tickLabel(v){const a=Math.abs(v);let s;if(a===0)s='0';else if(a>=100)s=v.toFixed(0);else if(a>=1)s=String(+v.toFixed(2));else s=String(+v.toPrecision(2));return s.replace('-','−');}
+
+/* ---------- colours and canvas helpers ---------- */
+let C={};
+function readColors(){const cs=getComputedStyle(document.documentElement);for(const n of ['screen','grid','axis','scr-text','trace1','trace2','trace3'])C[n]=cs.getPropertyValue('--'+n).trim();}
+function rgb(hex){const h=hex.replace('#','');const v=parseInt(h.length===3?h.split('').map(c=>c+c).join(''):h,16);return [v>>16&255,v>>8&255,v&255];}
+function rgba(hex,a){const c=rgb(hex);return `rgba(${c[0]},${c[1]},${c[2]},${a})`;}
+function prep(cv){const r=cv.getBoundingClientRect();const dpr=Math.min(window.devicePixelRatio||1,2);const W=Math.max(40,Math.round(r.width)),H=Math.max(40,Math.round(r.height));const pw=Math.round(W*dpr),ph=Math.round(H*dpr);if(cv.width!==pw||cv.height!==ph){cv.width=pw;cv.height=ph;}const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);ctx.fillStyle=C.screen;ctx.fillRect(0,0,W,H);ctx.lineWidth=1;return{ctx,W,H};}
+function frame(W,H,t,r,b,l){return{l,t,r:W-r,b:H-b,w:W-r-l,h:H-b-t};}
+function text(ctx,s,x,y,o){o=o||{};ctx.font=`${o.weight||500} ${o.size||11.5}px ${FONT}`;ctx.fillStyle=o.color||C['scr-text'];ctx.textAlign=o.align||'left';ctx.textBaseline=o.base||'alphabetic';ctx.fillText(s,x,y);}
+function hline(ctx,x0,x1,y,col,dash){ctx.strokeStyle=col;ctx.setLineDash(dash||[]);ctx.beginPath();ctx.moveTo(x0,Math.round(y)+.5);ctx.lineTo(x1,Math.round(y)+.5);ctx.stroke();ctx.setLineDash([]);}
+function vline(ctx,x,y0,y1,col,dash){ctx.strokeStyle=col;ctx.setLineDash(dash||[]);ctx.beginPath();ctx.moveTo(Math.round(x)+.5,y0);ctx.lineTo(Math.round(x)+.5,y1);ctx.stroke();ctx.setLineDash([]);}
+function niceTicks(lo,hi,n){const span=hi-lo;if(!(span>0))return[lo];const s0=span/n;const mag=Math.pow(10,Math.floor(Math.log10(s0)));const f=s0/mag;const st=(f<1.5?1:f<3.5?2:f<7.5?5:10)*mag;const out=[];for(let v=Math.ceil(lo/st-1e-9)*st;v<=hi+1e-9*span;v+=st)out.push(Math.abs(v)<st*1e-9?0:+v.toPrecision(10));return out;}
+
+/* ---------- controls ---------- */
+const CTL=[
+ {k:'T1m',label:'Phonon lifetime',note:'How long the resonator keeps ringing (T₁). The paper: 2.1 ms.',log:[1e-9,1],fmt:fmtTime},
+ {k:'chi2',label:'Qubit shift per phonon',note:'How far one phonon moves the qubit’s line (2χ/2π). The paper: 328 kHz.',log:[1e3,1e8],fmt:fmtHz},
+ {k:'nth',label:'Thermal phonons',note:'How warm the mode sits. Assumed.',lin:[0,0.5,0.005],fmt:v=>v.toFixed(3)},
+ {k:'T1q',label:'Qubit lifetime',note:'Assumed; the abstract doesn’t give it.',log:[1e-6,1e-3],fmt:fmtTime}
+];
+const ASM=[
+ {k:'eps',label:'Readout error',note:'Chance the qubit readout itself gets it wrong.',lin:[0,0.2,0.005],fmt:v=>(v*100).toFixed(1)+'%'},
+ {k:'tro',label:'Readout and reset time',note:'Dead time in each reading after the selective pulse.',log:[2e-7,2e-5],fmt:fmtTime},
+ {k:'pload',label:'Loading success',note:'Chance a phonon really was loaded at the start of a run.',lin:[0.5,1,0.01],fmt:v=>(v*100).toFixed(0)+'%'}
+];
+const ALL=CTL.concat(ASM);
+function buildCtl(c,host){
+  const id='s-'+c.k;const div=document.createElement('div');div.className='ctl';
+  div.innerHTML=`<div class="ctl-top"><label for="${id}">${c.label}</label><output id="o-${c.k}" for="${id}"></output></div><input type="range" id="${id}"><p class="ctl-note">${c.note}</p>`;
+  host.appendChild(div);const el=div.querySelector('input');
+  if(c.log){const a=Math.log10(c.log[0]),b=Math.log10(c.log[1]);el.min=0;el.max=1000;el.step=1;c.toPos=v=>Math.round((Math.log10(v)-a)/(b-a)*1000);c.toVal=p=>Math.pow(10,a+(b-a)*(+p)/1000);c.lo=c.log[0];c.hi=c.log[1];}
+  else{el.min=c.lin[0];el.max=c.lin[1];el.step=c.lin[2];c.toPos=v=>v;c.toVal=p=>+p;c.lo=c.lin[0];c.hi=c.lin[1];}
+  c.el=el;c.out=div.querySelector('output');
+  el.addEventListener('input',()=>{S[c.k]=c.toVal(el.value);c.out.textContent=c.fmt(S[c.k]);changed(false);});
+}
+function syncCtls(){for(const c of ALL){S[c.k]=Math.min(c.hi,Math.max(c.lo,S[c.k]));c.el.value=c.toPos(S[c.k]);c.out.textContent=c.fmt(S[c.k]);}}
+
+let tRun=0,tMany=0,animating=false,raf=0;
+function changed(animate){
+  light();
+  clearTimeout(tRun);tRun=setTimeout(()=>newRun(animate,animate),animate?0:90);
+  clearTimeout(tMany);$('busy').textContent='(working…)';tMany=setTimeout(many,350);
+}
+function light(){const d=derive(S);verdict(d);drawMap(d);drawSpec(d);specNote(d);}
+
+/* ---------- verdict annunciators ---------- */
+function verdict(d){
+  const pl=d.perLife;$('a-per').textContent=pl>=100?pl.toFixed(0):pl>=1?pl.toFixed(1):pl.toPrecision(1);
+  $('a-req').textContent=isFinite(d.nReq)?(d.nReq<10?d.nReq.toFixed(1):d.nReq.toFixed(0)):'never';
+  const y=$('a-yes'),w=$('a-why');y.className='';
+  if(pl<1){y.textContent='No';y.classList.add('no');w.textContent='The phonon is gone before the first reading finishes.';}
+  else if(d.visible){y.textContent='Yes';y.classList.add('yes');w.textContent=`About ${Math.floor(pl/d.nReq).toLocaleString('en-GB')} sure readings per lifetime.`;}
+  else if(pl>=d.nReq){y.textContent='Barely';y.classList.add('maybe');w.textContent='You can tell a phonon was there, but not time its exit well.';}
+  else{y.textContent='No';y.classList.add('no');w.textContent='Each reading says too little; the phonon leaves before you’re sure.';}
+}
+
+/* ---------- screen 1: where devices sit ---------- */
+let mapCache={key:'',img:null},mapBox=null;
+function rasterMap(){
+  const nx=200,ny=120;const off=document.createElement('canvas');off.width=nx;off.height=ny;const g=off.getContext('2d');const img=g.createImageData(nx,ny);
+  const cy=rgb(C.trace1),cc=rgb(C.trace2);const a0=Math.log10(MAP.T[0]),a1=Math.log10(MAP.T[1]),b0=Math.log10(MAP.X[0]),b1=Math.log10(MAP.X[1]);
+  const p=Object.assign({},S);
+  for(let j=0;j<ny;j++){p.chi2=Math.pow(10,b1-(b1-b0)*(j+0.5)/ny);
+    for(let i=0;i<nx;i++){p.T1m=Math.pow(10,a0+(a1-a0)*(i+0.5)/nx);const dd=derive(p);let col=null,al=0;
+      if(dd.visible){col=cy;al=0.36;}else if(dd.resolved){col=cc;al=0.17;}
+      if(col){const o=(j*nx+i)*4;img.data[o]=col[0];img.data[o+1]=col[1];img.data[o+2]=col[2];img.data[o+3]=Math.round(al*255);}}}
+  g.putImageData(img,0,0);return off;
+}
+function drawMap(d){
+  const cv=$('c-map');const {ctx,W,H}=prep(cv);const b=frame(W,H,24,12,36,52);mapBox=b;
+  const key=[S.nth,S.T1q,S.eps,S.tro,C.trace1].join('|');if(key!==mapCache.key||!mapCache.img)mapCache={key,img:rasterMap()};
+  ctx.save();ctx.imageSmoothingEnabled=true;ctx.drawImage(mapCache.img,b.l,b.t,b.w,b.h);ctx.restore();
+  const a0=Math.log10(MAP.T[0]),a1=Math.log10(MAP.T[1]),b0=Math.log10(MAP.X[0]),b1=Math.log10(MAP.X[1]);
+  const fx=v=>b.l+(Math.log10(v)-a0)/(a1-a0)*b.w, fy=v=>b.b-(Math.log10(v)-b0)/(b1-b0)*b.h;
+  const tl=['1 ns','10 ns','100 ns','1 µs','10 µs','100 µs','1 ms','10 ms','100 ms','1 s'];const every=b.w/9<42?2:1;
+  for(let e=0;e<=9;e++){const x=fx(Math.pow(10,-9+e));vline(ctx,x,b.t,b.b,C.grid);if(e%every===0)text(ctx,tl[e],x,b.b+15,{align:'center',color:C.axis});}
+  const yl=['1 kHz','10 kHz','100 kHz','1 MHz','10 MHz','100 MHz'];
+  for(let e=0;e<=5;e++){const y=fy(Math.pow(10,3+e));hline(ctx,b.l,b.r,y,C.grid);text(ctx,yl[e],b.l-6,y+4,{align:'right',color:C.axis});}
+  text(ctx,'Phonon lifetime',b.l+b.w/2,H-5,{align:'center',color:C.axis});
+  text(ctx,'Shift per phonon',b.l,15,{color:C.axis});
+  [[6.1e-9,'2010 FBAR'],[BENCH_T1,'Q 1000 FBAR, 2 GHz']].forEach((a,i)=>{const x=fx(a[0]);vline(ctx,x,b.t,b.b,rgba(C.trace3,.9),[4,4]);text(ctx,a[1],x+4,b.t+16+i*15,{color:C.trace3});});
+  const sx=fx(2.1e-3),sy=fy(328e3);ctx.fillStyle=C.trace1;ctx.beginPath();ctx.arc(sx,sy,4.5,0,2*Math.PI);ctx.fill();
+  text(ctx,'Stanford 2026',sx+9,sy-8,{color:C.trace1,weight:600});
+  const cx=fx(Math.min(MAP.T[1],Math.max(MAP.T[0],S.T1m))),cy=fy(Math.min(MAP.X[1],Math.max(MAP.X[0],S.chi2)));
+  ctx.strokeStyle=C['scr-text'];ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(cx,cy,8,0,2*Math.PI);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx-14,cy);ctx.lineTo(cx-9,cy);ctx.moveTo(cx+9,cy);ctx.lineTo(cx+14,cy);ctx.moveTo(cx,cy-14);ctx.lineTo(cx,cy-9);ctx.moveTo(cx,cy+9);ctx.lineTo(cx,cy+14);ctx.stroke();ctx.lineWidth=1;
+  const lg=[[rgba(C.trace1,.6),'Jumps watchable'],[rgba(C.trace2,.4),'Lines resolved, too brief to watch']];
+  ctx.font=`500 11.5px ${FONT}`;const lw=Math.max(...lg.map(a=>ctx.measureText(a[1]).width))+18;
+  let ly=b.b-12-(lg.length-1)*15;for(const a of lg){ctx.fillStyle=a[0];ctx.fillRect(b.r-lw-6,ly-9,10,10);text(ctx,a[1],b.r-lw+10,ly);ly+=15;}
+  mapNote();
+}
+function minLifetime(){
+  const p=Object.assign({},S);p.T1m=MAP.T[1];if(!derive(p).visible)return NaN;p.T1m=MAP.T[0];if(derive(p).visible)return MAP.T[0];
+  let lo=Math.log10(MAP.T[0]),hi=Math.log10(MAP.T[1]);for(let i=0;i<48;i++){const m=(lo+hi)/2;p.T1m=Math.pow(10,m);if(derive(p).visible)hi=m;else lo=m;}return Math.pow(10,hi);
+}
+function mapNote(){
+  const t=minLifetime(),el=$('map-note');
+  if(!isFinite(t)){el.textContent=`At a shift of ${fmtHz(S.chi2)}, no lifetime on this map is enough with the current qubit. Raise the shift or the qubit lifetime.`;return;}
+  const Q=2*Math.PI*2e9*t,r=t/BENCH_T1;
+  el.textContent=`At a shift of ${fmtHz(S.chi2)}, watching jumps needs a phonon lifetime of at least ${fmtTime(t)}, which is Q ≥ ${sci(Q)} at 2 GHz. `+(r>1?`A bench FBAR at Q 1000 falls short by a factor of about ${Math.round(r).toLocaleString('en-GB')}.`:'A bench FBAR at Q 1000 would already clear it.');
+}
+$('c-map').addEventListener('click',e=>{
+  const b=mapBox;if(!b)return;const r=$('c-map').getBoundingClientRect();const x=e.clientX-r.left,y=e.clientY-r.top;
+  if(x<b.l||x>b.r||y<b.t||y>b.b)return;
+  const a0=Math.log10(MAP.T[0]),a1=Math.log10(MAP.T[1]),b0=Math.log10(MAP.X[0]),b1=Math.log10(MAP.X[1]);
+  S.T1m=Math.pow(10,a0+(x-b.l)/b.w*(a1-a0));S.chi2=Math.pow(10,b1-(y-b.t)/b.h*(b1-b0));syncCtls();changed(true);
+});
+
+/* ---------- screen 2: what the qubit sees ---------- */
+function drawSpec(d){
+  const cv=$('c-spec');const {ctx,W,H}=prep(cv);const b=frame(W,H,30,14,36,14);
+  const n=S.nbar,kap=1/(2*Math.PI*S.T1m),wq=d.wq;const nshow=Math.ceil(n+4*Math.sqrt(n)+2);
+  const span=Math.max((nshow+1)*S.chi2,14*wq),x0=-0.12*span,x1=span;const u=span>=2e6?{s:1e6,l:'MHz'}:{s:1e3,l:'kHz'};
+  const Pn=[];let p=Math.exp(-n);for(let k=0;k<=nshow;k++){Pn.push(p);p*=n/(k+1);}
+  const M=Math.max(300,Math.round(b.w*2));const ys=new Float64Array(M);let ymax=0;
+  for(let i=0;i<M;i++){const f=x0+(x1-x0)*i/(M-1);let s=0;for(let k=0;k<=nshow;k++){const w=wq+k*kap,hw=w/2,df=f-k*S.chi2;s+=Pn[k]*(2/(Math.PI*w))*(hw*hw)/(df*df+hw*hw);}ys[i]=s;if(s>ymax)ymax=s;}
+  const fx=v=>b.l+(v-x0)/(x1-x0)*b.w,fy=v=>b.b-(v/(ymax*1.06))*b.h;
+  for(const t of niceTicks(x0/u.s,x1/u.s,6)){const x=fx(t*u.s);vline(ctx,x,b.t,b.b,C.grid);text(ctx,tickLabel(t),x,b.b+15,{align:'center',color:C.axis});}
+  hline(ctx,b.l,b.r,b.b,C.grid);
+  text(ctx,`Qubit frequency, from its empty-resonator line (${u.l})`,b.l+b.w/2,H-5,{align:'center',color:C.axis});
+  const path=()=>{ctx.beginPath();for(let i=0;i<M;i++){const x=b.l+b.w*i/(M-1),y=fy(ys[i]);i?ctx.lineTo(x,y):ctx.moveTo(x,y);}};
+  path();ctx.lineTo(b.r,b.b);ctx.lineTo(b.l,b.b);ctx.closePath();ctx.fillStyle=rgba(C.trace2,.16);ctx.fill();
+  path();ctx.strokeStyle=C.trace2;ctx.lineWidth=1.6;ctx.stroke();ctx.lineWidth=1;
+  if(d.resolved){text(ctx,'phonon number',b.r,b.t-10,{align:'right',color:C.axis});for(let k=0;k<=nshow;k++){const f=k*S.chi2;if(f>x1)break;if(Pn[k]<0.01)continue;text(ctx,String(k),fx(f),b.t-10,{align:'center',color:C.trace1,weight:600});}}
+  else text(ctx,'lines smeared together',b.r,b.t-10,{align:'right',color:C.trace3});
+}
+function specNote(d){
+  $('spec-note').textContent=d.resolved
+   ?`Resolved: lines ${fmtHz(S.chi2)} apart, the one-phonon line ${fmtHz(d.w1)} wide, so the qubit can count phonons. Sauerbrey turned round: the resonator is the analyte, the qubit the sensor.`
+   :`Smeared: lines ${fmtHz(S.chi2)} apart but the one-phonon line is ${fmtHz(d.w1)} wide, so the qubit can tell “none” from “some” and nothing finer.`;
+}
+$('nbar').addEventListener('input',e=>{S.nbar=+e.target.value;$('o-nbar').textContent=S.nbar.toFixed(1);const d=derive(S);drawSpec(d);});
+
+/* ---------- screen 3: one run ---------- */
+let RUN=null;
+function newRun(animate,bump){
+  if(bump)S.seed++;
+  const {d,N,P,P0}=setup(S);const K=recordLength(S,d,6000);const rng=mulberry32(1009*S.seed+17);
+  const o=oneRun(S,d,K,N,P0,P,rng);const f=firstStay(o,K,d,d.T1eff);RUN={o,f,K,d};
+  cancelAnimationFrame(raf);animating=false;
+  if(animate&&!reduceMotion){animating=true;$('run-note').textContent='';const t0=performance.now();
+    const step=t=>{const fr=Math.min(1,(t-t0)/1300);drawRun(fr);if(fr<1)raf=requestAnimationFrame(step);else{animating=false;runNote();}};raf=requestAnimationFrame(step);}
+  else{drawRun(1);runNote();}
+}
+function drawRun(fr){
+  if(!RUN)return;const cv=$('c-run');const {ctx,W,H}=prep(cv);const b=frame(W,H,22,14,36,40);
+  const {o,f,K,d}=RUN;const tk=k=>d.tsel/2+k*d.tc;const T=tk(K-1)+d.tc/2;const u=timeUnit(T);
+  const fx=t=>b.l+(t/T)*b.w,fy=v=>b.b-((v+0.12)/1.26)*b.h;
+  for(const t of niceTicks(0,T/u.s,6)){const x=fx(t*u.s);vline(ctx,x,b.t,b.b,C.grid);text(ctx,tickLabel(t),x,b.b+15,{align:'center',color:C.axis});}
+  [[0,'none'],[1,'one']].forEach(a=>{const y=fy(a[0]);hline(ctx,b.l,b.r,y,C.grid);text(ctx,a[1],b.l-6,y+4,{align:'right',color:C.axis});});
+  text(ctx,`Time (${u.l})`,b.l+b.w/2,H-5,{align:'center',color:C.axis});
+  const km=Math.max(1,Math.min(K,Math.ceil(fr*K)));
+  if(S.showTruth){ctx.strokeStyle=rgba(C.trace2,.85);ctx.lineWidth=1.5;ctx.beginPath();let py=o.truth[0]===1?1:0;ctx.moveTo(fx(0),fy(py));
+    for(let k=0;k<km;k++){const y=o.truth[k]===1?1:0;if(y!==py){const x=fx(tk(k));ctx.lineTo(x,fy(py));ctx.lineTo(x,fy(y));py=y;}}
+    ctx.lineTo(fx(tk(km-1)),fy(py));ctx.stroke();ctx.lineWidth=1;}
+  ctx.fillStyle=rgba(C['scr-text'],.55);
+  for(let k=0;k<km;k++){const x=fx(tk(k));const j=(((k+1)*2654435761)>>>0)%1000/1000;const y=o.clicks[k]?fy(1.04+0.06*j):fy(-0.04-0.06*j);ctx.fillRect(x-0.8,y-0.8,1.6,1.6);}
+  ctx.strokeStyle=C.trace1;ctx.lineWidth=1.7;ctx.beginPath();for(let k=0;k<km;k++){const x=fx(tk(k)),y=fy(o.fwd1[k]);k?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();ctx.lineWidth=1;
+  if(o.kh>=0&&o.kh<km){const x=fx(tk(o.kh));ctx.fillStyle=C.trace3;ctx.beginPath();ctx.moveTo(x,b.t+1);ctx.lineTo(x-5,b.t-8);ctx.lineTo(x+5,b.t-8);ctx.closePath();ctx.fill();text(ctx,'heralded',x+8,b.t-1,{color:C.trace3});}
+  if(f&&f.ended&&f.kend<km){const x=fx(tk(f.kend));vline(ctx,x,b.t,b.b,C.trace3,[4,3]);text(ctx,'jump',x+5,fy(0.5),{color:C.trace3,weight:600});}
+  if(fr>=1&&o.kh<0){text(ctx,'Never heralded:',b.l+b.w/2,b.t+b.h/2-8,{align:'center',color:C.trace3,weight:600,size:13});text(ctx,'the phonon left before the readings could be sure.',b.l+b.w/2,b.t+b.h/2+10,{align:'center',color:C.trace3,size:12});}
+}
+function runNote(){
+  const el=$('run-note');if(!RUN)return;const {o,f,K,d}=RUN;const tk=k=>d.tsel/2+k*d.tc;
+  const lead='Dots are single readings (top: the qubit clicked). Yellow is the live belief that one phonon is there; blue is the hidden truth.';
+  if(o.kh<0){el.textContent=lead+' No herald this run.';return;}
+  if(!f.ended){el.textContent=`${lead} Heralded at ${fmtTime(tk(o.kh))} and still ringing when the record ended.`;return;}
+  if(o.truth[o.kh]!==1){el.textContent=`${lead} This one was a false herald: nothing was there.`;return;}
+  let kt=-1;for(let k=o.kh;k<K;k++){if(o.truth[k]!==1){kt=k;break;}}
+  el.textContent=`${lead} Heralded at ${fmtTime(tk(o.kh))}. The readings put the jump at ${fmtTime(tk(f.kend))}`+(kt>=0?`; the hidden truth says ${fmtTime(tk(kt))}.`:'.');
+}
+$('b-run').addEventListener('click',()=>newRun(true,true));
+$('truth').addEventListener('change',e=>{S.showTruth=e.target.checked;if(!animating)drawRun(1);});
+
+/* ---------- screen 4: many runs ---------- */
+let MANY=null;
+function many(){MANY=manyRuns(S,4242);$('busy').textContent='';drawMany();}
+function drawMany(){
+  const cv=$('c-many');const {ctx,W,H}=prep(cv);const b=frame(W,H,16,14,36,40);const el=$('many-note');if(!MANY)return;
+  const d=MANY.d,Te=d.T1eff;
+  if(MANY.nh===0){text(ctx,'No heralded runs, so nothing to time.',b.l+b.w/2,b.t+b.h/2,{align:'center',color:C.trace3,weight:600,size:13});
+    el.textContent=`${MANY.runs} runs, none heralded. Readings this weak or this slow never reach 99:1 odds before the phonon leaves.`;return;}
+  if(MANY.nj<5){text(ctx,'Too few jumps inside the record to time.',b.l+b.w/2,b.t+b.h/2,{align:'center',color:C.trace3,weight:600,size:13});
+    el.textContent=`${MANY.runs} runs, ${MANY.nh} heralded, but the phonon outlives almost every record. Shorten the lifetime to see the statistics.`;return;}
+  const tmax=4*Te,nb=24,bw=tmax/nb,cnt=new Array(nb).fill(0);for(const w of MANY.waits){const i=Math.floor(w/bw);if(i>=0&&i<nb)cnt[i]++;}
+  const Test=MANY.T1est,Tp=isFinite(Test)?Test:Te;const ymax=Math.max(1,...cnt,MANY.nj*bw/Tp)*1.12;
+  const u=timeUnit(tmax);const fx=t=>b.l+t/tmax*b.w,fy=v=>b.b-v/ymax*b.h;
+  for(const t of niceTicks(0,tmax/u.s,6)){const x=fx(t*u.s);vline(ctx,x,b.t,b.b,C.grid);text(ctx,tickLabel(t),x,b.b+15,{align:'center',color:C.axis});}
+  for(const v of niceTicks(0,ymax,4)){const y=fy(v);hline(ctx,b.l,b.r,y,C.grid);text(ctx,tickLabel(v),b.l-6,y+4,{align:'right',color:C.axis});}
+  text(ctx,`How long the phonon stayed after its herald (${u.l})`,b.l+b.w/2,H-5,{align:'center',color:C.axis});
+  ctx.fillStyle=rgba(C.trace2,.55);for(let i=0;i<nb;i++){if(!cnt[i])continue;const x=fx(i*bw)+1,x2=fx((i+1)*bw)-1,y=fy(cnt[i]);ctx.fillRect(x,y,Math.max(1,x2-x),b.b-y);}
+  ctx.strokeStyle=C.trace1;ctx.lineWidth=1.8;ctx.beginPath();for(let i=0;i<=120;i++){const t=tmax*i/120,v=MANY.nj*bw/Tp*Math.exp(-t/Tp),x=fx(t),y=fy(v);i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();ctx.lineWidth=1;
+  const xe=fx(Te);vline(ctx,xe,b.t,b.b,C.trace3,[4,3]);text(ctx,'expected',xe+5,b.t+13,{color:C.trace3});
+  el.textContent=`${MANY.runs} runs, ${MANY.nh} heralded. Lifetime read back from the clicks alone: ${fmtPM(Test,Test/Math.sqrt(MANY.nj))}, against ${fmtTime(Te)} expected`
+    +(S.nth>0?' (a warm phonon can also leave upwards, so it lives T₁ ÷ (1 + 3 × thermal phonons)).':'.')
+    +` Herald fidelity here is ${(100*MANY.heraldFid).toFixed(1)}%; the paper’s 85% says the real apparatus is noisier than these assumptions.`;
+}
+
+/* ---------- bridge: BVD fit to coupling ---------- */
+let BR=NaN;
+function bridge(){
+  const f=+$('f-f').value*1e9,C0=+$('f-c0').value*1e-15,Cm=+$('f-cm').value*1e-18,Cp=+$('f-cp').value*1e-15,Dl=+$('f-d').value*1e6;
+  const reg=$('r-reg'),use=$('b-use');
+  if(!(f>0)||!(C0>=0)||!(Cm>0)||!(Cp>0)||!isFinite(Dl)){['r-cs','r-al','r-g','r-chi'].forEach(id=>$(id).textContent='–');reg.textContent='Enter a positive frequency and capacitances.';use.disabled=true;BR=NaN;return;}
+  const CS=C0+Cp,alpha=-(Q_E*Q_E)/(2*CS*H_PLANCK),g=(f/2)*Math.sqrt(Cm/CS),den=Dl*(Dl+alpha),chi2=den!==0?2*g*g*alpha/den:NaN;
+  $('r-cs').textContent=fmtCap(CS);$('r-al').textContent=fmtHz(alpha);$('r-g').textContent=fmtHz(g);$('r-chi').textContent=isFinite(chi2)?fmtHz(chi2):'undefined';
+  const lim=Math.min(Math.abs(Dl),Math.abs(Dl+alpha));let ok=false,msg;
+  if(!isFinite(chi2)||lim===0)msg='The qubit sits exactly on a resonance, so there is no dispersive shift to speak of. Change the detuning.';
+  else if(g<0.1*lim&&Cm<0.1*CS){ok=true;msg=`Dispersive: g is ${(100*g/lim).toFixed(1)}% of the nearest detuning, so the qubit reads phonon number without trading energy with the resonator.`;}
+  else{const r=g/lim;msg=`Not dispersive: g is ${r.toFixed(r<10?1:0)} times the nearest detuning, so qubit and resonator merge into one hybrid mode.`+(Math.abs(alpha)<g?` The qubit’s nonlinearity (${fmtHz(Math.abs(alpha))}) is also smaller than the coupling, so it barely behaves as a qubit at all. Shrink the transducer.`:' Detune further or shrink the transducer.');}
+  reg.textContent=msg;use.disabled=!(ok&&Math.abs(chi2)>=1e3&&Math.abs(chi2)<=1e8);BR=chi2;
+}
+const BP={nano:{f:2,c0:10,cm:0.8,cp:70,d:150},fbar:{f:2,c0:1000,cm:50000,cp:70,d:150}};
+function setBP(v){$('f-f').value=v.f;$('f-c0').value=v.c0;$('f-cm').value=v.cm;$('f-cp').value=v.cp;$('f-d').value=v.d;bridge();}
+$('bp-nano').addEventListener('click',()=>setBP(BP.nano));$('bp-fbar').addEventListener('click',()=>setBP(BP.fbar));
+['f-f','f-c0','f-cm','f-cp','f-d'].forEach(id=>$(id).addEventListener('input',bridge));
+$('b-use').addEventListener('click',()=>{if(!isFinite(BR))return;S.chi2=Math.abs(BR);syncCtls();changed(true);$('instrument').scrollIntoView({behavior:reduceMotion?'auto':'smooth',block:'start'});});
+
+/* ---------- presets, redraws, start ---------- */
+const PRESETS={stanford:Object.assign({},DEFAULTS),fbar2010:{T1m:6.1e-9,chi2:328e3},bench:{T1m:BENCH_T1,chi2:328e3}};
+document.querySelectorAll('[data-preset]').forEach(bt=>bt.addEventListener('click',()=>{Object.assign(S,PRESETS[bt.dataset.preset]);syncCtls();changed(true);}));
+function redrawAll(){readColors();mapCache.key='';light();if(!animating)drawRun(1);drawMany();}
+let rz=0;const ro=new ResizeObserver(()=>{cancelAnimationFrame(rz);rz=requestAnimationFrame(()=>{light();if(!animating)drawRun(1);drawMany();});});
+['c-map','c-spec','c-run','c-many'].forEach(id=>ro.observe($(id)));
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',redrawAll);
+new MutationObserver(redrawAll).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+readColors();
+CTL.forEach(c=>buildCtl(c,$('ctls')));ASM.forEach(c=>buildCtl(c,$('asm')));
+syncCtls();light();bridge();newRun(true,false);
+$('busy').textContent='(working…)';setTimeout(many,60);
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{light();if(!animating)drawRun(1);drawMany();});
+
+})();
+</script>
+</body>
+</html>
