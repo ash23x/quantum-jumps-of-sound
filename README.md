@@ -1,5 +1,7 @@
 # Quantum jumps of sound: a working model
 
+Live: https://quantum-jumps-of-sound.vercel.app
+
 An interactive model of the Stanford experiment that watched a single phonon leave a vibrating resonator in real time: T. Makihara, E. Szakiel *et al.*, "Quantum jumps of sound", *Science* (2026), doi:10.1126/science.aeh7535.
 
 ## What it does
